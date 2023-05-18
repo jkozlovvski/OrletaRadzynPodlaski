@@ -12,6 +12,7 @@ numpy = "^1.24.3"
 torch = "^2.0.1"
 huggingface = "^0.0.1"
 pre-commit = "^3.3.1"
+pillow = "^9.5.0"
 
 [build-system]
 requires = ["poetry-core"]
