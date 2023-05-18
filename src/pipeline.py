@@ -1,22 +1,12 @@
 import numpy as np
 from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score
-from sklearn.ensemble import RandomForestClassifier
-from bertopic import BERTopic
-from bertopic.vectorizers import ClassTfidfTransformer
-from bertopic.dimensionality import BaseDimensionalityReduction
-from sklearn.linear_model import LogisticRegression
-from dataclass import text_dataset_train
-from dataclass import TextDataSet, ImageDataSet
+from dataclass import ImageDataSet
 from transformers import ViTImageProcessor, AutoModelForImageClassification
 import torch
-from PIL import Image
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
-from torchvision.transforms import transforms, ToPILImage, ToTensor
-import torch.nn.functional as F
-from torchvision.transforms import ToTensor, Lambda
 
 
 def cross_validation_training(model, dataset, folds=10):
@@ -52,7 +42,7 @@ def img_pipeline():
     )
     image_data_set = ImageDataSet("../datasets/train_set", extractor)
 
-    dataloader = DataLoader(image_data_set, batch_size=8, shuffle=True, num_workers=10)
+    dataloader = DataLoader(image_data_set, batch_size=32, shuffle=True, num_workers=10)
 
     model.classifier = torch.nn.Linear(
         in_features=model.classifier.in_features, out_features=21
