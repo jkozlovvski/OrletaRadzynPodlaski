@@ -51,7 +51,7 @@ class TextDataSet(Dataset):
         docs_per_class = docs.groupby(["labels"], as_index=False).agg(
             {"texts": " ".join}
         )
-        count_vectorizer = CountVectorizer(stop_words="english", max_features=1000).fit(
+        count_vectorizer = CountVectorizer(stop_words="english", max_features=128).fit(
             docs_per_class.texts
         )
         count = count_vectorizer.transform(docs_per_class.texts)
