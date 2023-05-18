@@ -1,14 +1,14 @@
 import numpy as np
-from utils import id2label, label2id
-from dataclass import text_dataset_train, image_dataset_train
-from torch.utils.data import DataLoader
 from sklearn.model_selection import KFold
-from sklearn import svm
 from sklearn.metrics import accuracy_score
 from sklearn.ensemble import RandomForestClassifier
+from bertopic import BERTopic
+from bertopic.vectorizers import ClassTfidfTransformer
+from bertopic.dimensionality import BaseDimensionalityReduction
+from sklearn.linear_model import LogisticRegression
+from dataclass import text_dataset_train
 
 
-# simple pipeline for models
 def cross_validation_training(model, dataset, folds=10):
     kf = KFold(n_splits=10)
     for i, (train_index, test_index) in enumerate(kf.split(dataset)):
@@ -33,6 +33,41 @@ def cross_validation_training(model, dataset, folds=10):
         print(f"Accuracy score: {accuracy_score(np.array(y_test), predicted)}")
 
 
+# works like shit
+def bertopic_pipeline(dataset):
+    # as bertopic can take whole strings as input
+    # there is a separate pipeline for it
+    empty_dimensionality_model = BaseDimensionalityReduction()
+    clf = LogisticRegression()
+    ctfidf_model = ClassTfidfTransformer(reduce_frequent_words=True)
+
+    # Create a fully supervised BERTopic instance
+    topic_model = BERTopic(
+        umap_model=empty_dimensionality_model,
+        hdbscan_model=clf,
+        ctfidf_model=ctfidf_model,
+    )
+    kf = KFold(n_splits=10)
+    for i, (train_index, test_index) in enumerate(kf.split(dataset)):
+        print(f"Fold {i}:")
+        X_train, y_train = [], []
+        X_test, y_test = [], []
+        for idx in train_index:
+            value, target = dataset[idx]
+            X_train.append(value)
+            y_train.append(target)
+
+        for idx in test_index:
+            value, target = dataset[idx]
+            X_test.append(value)
+            y_test.append(target)
+        topic_model.fit(X_train, y=y_train)
+        predicted = topic_model.transform(X_test)[1]
+        print(f"Accuracy score: {accuracy_score(y_test, predicted)}")
+
+
 if __name__ == "__main__":
     clf = RandomForestClassifier()
-    cross_validation_training(clf, text_dataset_train)
+    dataset = text_dataset_train
+    dataset.preprocess_text()
+    cross_validation_training(clf, dataset)
