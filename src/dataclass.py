@@ -5,10 +5,12 @@ import pandas as pd
 from PIL import Image
 import numpy as np
 import random
+import torch
 
 from sklearn.feature_extraction.text import CountVectorizer
 from utils import CTFIDFVectorizer
 from utils import id2label, label2id
+import torch.nn.functional as F
 
 import re
 
@@ -77,7 +79,7 @@ class TextDataSet(Dataset):
 
 
 class ImageDataSet(Dataset):
-    def __init__(self, img_dir, transform=None, transform_label=None):
+    def __init__(self, img_dir, extractor=None):
         self.img_dir = img_dir
         self.labels = {}
         for dir_name in glob.glob(img_dir + "/*"):
@@ -85,9 +87,8 @@ class ImageDataSet(Dataset):
             for file_name in glob.glob(dir_name + "/*"):
                 file_name = os.path.basename(file_name)
                 self.labels[file_name] = id2label[label]
-        self.transform = transform
-        self.transform_label = transform_label
         self.images = list(self.labels.keys())
+        self.extractor = extractor
 
     def __len__(self):
         return len(self.labels)
@@ -99,9 +100,11 @@ class ImageDataSet(Dataset):
         )
         image = Image.open(img_path)
         image = image.convert("RGB")
-        image = self.transform(image)
+        image = self.extractor(images=image, return_tensors="pt")["pixel_values"]
+        image = torch.squeeze(image)
+        label = F.one_hot(torch.tensor(self.labels[image_name]), 21)
 
-        return image, self.transform_label(self.labels[image_name])
+        return image, label
 
 
 text_dataset_train = TextDataSet(
