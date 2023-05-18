@@ -33,7 +33,7 @@ class TextDataSet(Dataset):
 
         # preprocessing text
         self.texts = {k: self._clean_text(v) for k, v in self.texts.items()}
-        tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=128)
+        tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=1000)
         tfidf_vectorizer.fit(list(self.texts.values()))
         self.vectorizer = tfidf_vectorizer
         self.texts = {k: tfidf_vectorizer.transform([v]) for k, v in self.texts.items()}
