@@ -6,7 +6,8 @@ from PIL import Image
 import numpy as np
 import random
 
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
+from utils import CTFIDFVectorizer
 from utils import id2label, label2id
 
 
@@ -33,12 +34,24 @@ class TextDataSet(Dataset):
     def preprocess_text(self):
         # preprocessing text
         self.texts = {k: self._clean_text(v) for k, v in self.texts.items()}
-        tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=1000)
-        tfidf_vectorizer.fit(list(self.texts.values()))
-        self.vectorizer = tfidf_vectorizer
-        self.texts = {k: tfidf_vectorizer.transform([v]) for k, v in self.texts.items()}
-
-        # todo: check for classes distributions on words
+        dic = {
+            text: label
+            for (k_2, text), (k_1, label) in zip(
+                self.texts.items(), self.labels.items()
+            )
+            if k_1 == k_2
+        }
+        docs = pd.DataFrame({"texts": list(dic.keys()), "labels": list(dic.values())})
+        docs_per_class = docs.groupby(["labels"], as_index=False).agg(
+            {"texts": " ".join}
+        )
+        count_vectorizer = CountVectorizer().fit(docs_per_class.texts)
+        count = count_vectorizer.transform(docs_per_class.texts)
+        ctfidf_vectorizer = CTFIDFVectorizer().fit(count, n_samples=len(docs))
+        self.texts = {
+            k: ctfidf_vectorizer.transform(count_vectorizer.transform([v]))
+            for k, v in self.texts.items()
+        }
 
     def __len__(self):
         return len(self.texts)
