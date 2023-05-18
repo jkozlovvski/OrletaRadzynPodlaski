@@ -45,9 +45,11 @@ class TextDataSet(Dataset):
         docs_per_class = docs.groupby(["labels"], as_index=False).agg(
             {"texts": " ".join}
         )
-        count_vectorizer = CountVectorizer().fit(docs_per_class.texts)
+        count_vectorizer = CountVectorizer(
+            stop_words="english", ngram_range=(1, 2), max_features=10000
+        ).fit(docs_per_class.texts)
         count = count_vectorizer.transform(docs_per_class.texts)
-        ctfidf_vectorizer = CTFIDFVectorizer().fit(count, n_samples=len(docs))
+        ctfidf_vectorizer = CTFIDFVectorizer(stop_w).fit(count, n_samples=len(docs))
         self.texts = {
             k: ctfidf_vectorizer.transform(count_vectorizer.transform([v]))
             for k, v in self.texts.items()
