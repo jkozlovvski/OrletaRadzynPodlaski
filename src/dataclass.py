@@ -19,11 +19,21 @@ class TextDataSet(Dataset):
         self.texts = pd.read_pickle(dataset_path)
         self.labels = pd.read_pickle(labels_path)
         self.labels = {k: id2label[v] for k, v in self.labels.items()}
+
+        # some keys are missing
+        keys_to_del = []
+        for k, v in self.texts.items():
+            if k not in self.labels.keys():
+                keys_to_del.append(k)
+
+        for k in keys_to_del:
+            del self.texts[k]
+
         self.images = list(self.texts.keys())
 
         # preprocessing text
         self.texts = {k: self._clean_text(v) for k, v in self.texts.items()}
-        tfidf_vectorizer = TfidfVectorizer(stop_words="english")
+        tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=128)
         tfidf_vectorizer.fit(list(self.texts.values()))
         self.vectorizer = tfidf_vectorizer
         self.texts = {k: tfidf_vectorizer.transform([v]) for k, v in self.texts.items()}
