@@ -35,7 +35,8 @@ class TextDataSet(Dataset):
 
         for k in keys_to_del:
             del self.texts[k]
-        self.images = list(self.texts.keys())
+
+        self.preprocess_text()
 
     def preprocess_text(self):
         # preprocessing text
@@ -60,6 +61,10 @@ class TextDataSet(Dataset):
             k: ctfidf_vectorizer.transform(count_vectorizer.transform([v]))
             for k, v in self.texts.items()
         }
+        # shape of text [1, 512]
+
+        # maybe at the end we can also check normal tf-idf?
+        # though it worked worse
 
     def __len__(self):
         return len(self.texts)
@@ -87,18 +92,15 @@ class ImageDataSet(Dataset):
     def __len__(self):
         return len(self.labels)
 
-    def use_rgb(self):
-        self.use_rgb = True
-
     def __getitem__(self, idx):
         image_name = self.images[idx]
         img_path = os.path.join(
             self.img_dir, label2id[self.labels[image_name]], image_name
         )
         image = Image.open(img_path)
-        if self.use_rgb:
-            image = image.convert("RGB")
-        return np.array(image), self.labels[image_name]
+        image = image.convert("RGB")
+        image = self.transform(image)
+        return image, self.labels[image_name]
 
 
 text_dataset_train = TextDataSet(
