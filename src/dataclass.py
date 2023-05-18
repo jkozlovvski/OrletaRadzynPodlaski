@@ -10,10 +10,16 @@ from sklearn.feature_extraction.text import CountVectorizer
 from utils import CTFIDFVectorizer
 from utils import id2label, label2id
 
+import re
+
 
 class TextDataSet(Dataset):
     def _clean_text(self, text):
         text = text.lower()  # making text lowercase
+        text = re.sub(r"[^a-zA-Z?.!,¿]+", " ", text)  # regular expression for deleting
+        punctuations = "@#!?+&*[]-%.:/();$=><|{}^" + "'`" + "_"
+        for p in punctuations:
+            text = text.replace(p, "")  # punctuations removal
         return text
 
     def __init__(self, dataset_path, labels_path):
@@ -45,11 +51,11 @@ class TextDataSet(Dataset):
         docs_per_class = docs.groupby(["labels"], as_index=False).agg(
             {"texts": " ".join}
         )
-        count_vectorizer = CountVectorizer(
-            stop_words="english", ngram_range=(1, 2), max_features=10000
-        ).fit(docs_per_class.texts)
+        count_vectorizer = CountVectorizer(stop_words="english", max_features=1000).fit(
+            docs_per_class.texts
+        )
         count = count_vectorizer.transform(docs_per_class.texts)
-        ctfidf_vectorizer = CTFIDFVectorizer(stop_w).fit(count, n_samples=len(docs))
+        ctfidf_vectorizer = CTFIDFVectorizer().fit(count, n_samples=len(docs))
         self.texts = {
             k: ctfidf_vectorizer.transform(count_vectorizer.transform([v]))
             for k, v in self.texts.items()
