@@ -77,7 +77,7 @@ class TextDataSet(Dataset):
 
 
 class ImageDataSet(Dataset):
-    def __init__(self, img_dir, transform=None):
+    def __init__(self, img_dir, transform=None, transform_label=None):
         self.img_dir = img_dir
         self.labels = {}
         for dir_name in glob.glob(img_dir + "/*"):
@@ -86,8 +86,8 @@ class ImageDataSet(Dataset):
                 file_name = os.path.basename(file_name)
                 self.labels[file_name] = id2label[label]
         self.transform = transform
+        self.transform_label = transform_label
         self.images = list(self.labels.keys())
-        self.use_rgb = False
 
     def __len__(self):
         return len(self.labels)
@@ -100,7 +100,8 @@ class ImageDataSet(Dataset):
         image = Image.open(img_path)
         image = image.convert("RGB")
         image = self.transform(image)
-        return image, self.labels[image_name]
+
+        return image, self.transform_label(self.labels[image_name])
 
 
 text_dataset_train = TextDataSet(
