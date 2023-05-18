@@ -28,9 +28,9 @@ class TextDataSet(Dataset):
 
         for k in keys_to_del:
             del self.texts[k]
-
         self.images = list(self.texts.keys())
 
+    def preprocess_text(self):
         # preprocessing text
         self.texts = {k: self._clean_text(v) for k, v in self.texts.items()}
         tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=1000)
