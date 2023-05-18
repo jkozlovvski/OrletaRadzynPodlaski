@@ -34,6 +34,7 @@ def cross_validation_training(model, dataset, folds=10):
 
 
 def img_pipeline():
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     extractor = ViTImageProcessor.from_pretrained(
         "DunnBC22/dit-base-Business_Documents_Classified_v2"
     )
@@ -41,12 +42,12 @@ def img_pipeline():
         "DunnBC22/dit-base-Business_Documents_Classified_v2"
     )
     image_data_set = ImageDataSet("../datasets/train_set", extractor)
-
-    dataloader = DataLoader(image_data_set, batch_size=32, shuffle=True, num_workers=10)
+    dataloader = DataLoader(image_data_set, batch_size=32, shuffle=True, num_workers=4)
 
     model.classifier = torch.nn.Linear(
         in_features=model.classifier.in_features, out_features=21
     )
+
     for param in model.parameters():
         param.requires_grad = False
 

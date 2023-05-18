@@ -3,16 +3,18 @@ from torch.utils.data import Dataset
 import os
 import pandas as pd
 from PIL import Image
-import numpy as np
 import random
 import torch
 
 from sklearn.feature_extraction.text import CountVectorizer
-from .utils import CTFIDFVectorizer
-from .utils import id2label, label2id
+from utils import CTFIDFVectorizer
+from utils import id2label, label2id
 import torch.nn.functional as F
 
 import re
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TextDataSet(Dataset):
@@ -100,18 +102,17 @@ class ImageDataSet(Dataset):
         )
         image = Image.open(img_path)
         image = image.convert("RGB")
-        if self.extractor is not None:
-            image = self.extractor(images=image, return_tensors="pt")["pixel_values"]
-            image = torch.squeeze(image)
+        image = self.extractor(images=image, return_tensors="pt")["pixel_values"]
+        image = torch.squeeze(image)
         label = F.one_hot(torch.tensor(self.labels[image_name]), 21)
 
-        return image, label
+        return image.to(device), label.to(device)
 
 
 text_dataset_train = TextDataSet(
-    "./hackathon/train_set_ocr.pkl", "./hackathon/train_labels_final.pkl"
+    "../hackathon/train_set_ocr.pkl", "../hackathon/train_labels_final.pkl"
 )
-image_dataset_train = ImageDataSet("./datasets/train_set")
+image_dataset_train = ImageDataSet("../datasets/train_set")
 
 
 if __name__ == "__main__":
