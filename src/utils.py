@@ -14,9 +14,9 @@ def make_dict_from_json(path: str):
     return data
 
 
-id2label = make_dict_from_json("../hackathon/id2label_final.json")
+id2label = make_dict_from_json("./hackathon/id2label_final.json")
 id2label = {k: int(v) for k, v in id2label.items()}
-label2id = make_dict_from_json("../hackathon/label2id_final.json")
+label2id = make_dict_from_json("./hackathon/label2id_final.json")
 label2id = {int(k): v for k, v in label2id.items()}
 
 

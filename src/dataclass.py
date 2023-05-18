@@ -100,17 +100,18 @@ class ImageDataSet(Dataset):
         )
         image = Image.open(img_path)
         image = image.convert("RGB")
-        image = self.extractor(images=image, return_tensors="pt")["pixel_values"]
-        image = torch.squeeze(image)
+        if self.extractor is not None:
+            image = self.extractor(images=image, return_tensors="pt")["pixel_values"]
+            image = torch.squeeze(image)
         label = F.one_hot(torch.tensor(self.labels[image_name]), 21)
 
         return image, label
 
 
 text_dataset_train = TextDataSet(
-    "../hackathon/train_set_ocr.pkl", "../hackathon/train_labels_final.pkl"
+    "./hackathon/train_set_ocr.pkl", "./hackathon/train_labels_final.pkl"
 )
-image_dataset_train = ImageDataSet("../datasets/train_set")
+image_dataset_train = ImageDataSet("./datasets/train_set")
 
 
 if __name__ == "__main__":
