@@ -13,6 +13,7 @@ torch = "^2.0.1"
 huggingface = "^0.0.1"
 pre-commit = "^3.3.1"
 pillow = "^9.5.0"
+matplotlib = "^3.7.1"
 
 [build-system]
 requires = ["poetry-core"]

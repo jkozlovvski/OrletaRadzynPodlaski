@@ -7,6 +7,16 @@ from bertopic.vectorizers import ClassTfidfTransformer
 from bertopic.dimensionality import BaseDimensionalityReduction
 from sklearn.linear_model import LogisticRegression
 from dataclass import text_dataset_train
+from dataclass import TextDataSet, ImageDataSet
+from transformers import ViTImageProcessor, AutoModelForImageClassification
+import torch
+from PIL import Image
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
+from torchvision.transforms import transforms, ToPILImage, ToTensor
+import torch.nn.functional as F
+from torchvision.transforms import ToTensor, Lambda
 
 
 def cross_validation_training(model, dataset, folds=10):
@@ -33,41 +43,49 @@ def cross_validation_training(model, dataset, folds=10):
         print(f"Accuracy score: {accuracy_score(np.array(y_test), predicted)}")
 
 
-# works like shit
-def bertopic_pipeline(dataset):
-    # as bertopic can take whole strings as input
-    # there is a separate pipeline for it
-    empty_dimensionality_model = BaseDimensionalityReduction()
-    clf = LogisticRegression()
-    ctfidf_model = ClassTfidfTransformer(reduce_frequent_words=True)
-
-    # Create a fully supervised BERTopic instance
-    topic_model = BERTopic(
-        umap_model=empty_dimensionality_model,
-        hdbscan_model=clf,
-        ctfidf_model=ctfidf_model,
+def img_pipeline():
+    extractor = ViTImageProcessor.from_pretrained(
+        "DunnBC22/dit-base-Business_Documents_Classified_v2"
     )
-    kf = KFold(n_splits=10)
-    for i, (train_index, test_index) in enumerate(kf.split(dataset)):
-        print(f"Fold {i}:")
-        X_train, y_train = [], []
-        X_test, y_test = [], []
-        for idx in train_index:
-            value, target = dataset[idx]
-            X_train.append(value)
-            y_train.append(target)
+    model = AutoModelForImageClassification.from_pretrained(
+        "DunnBC22/dit-base-Business_Documents_Classified_v2"
+    )
+    image_data_set = ImageDataSet("../datasets/train_set", extractor)
 
-        for idx in test_index:
-            value, target = dataset[idx]
-            X_test.append(value)
-            y_test.append(target)
-        topic_model.fit(X_train, y=y_train)
-        predicted = topic_model.transform(X_test)[1]
-        print(f"Accuracy score: {accuracy_score(y_test, predicted)}")
+    dataloader = DataLoader(image_data_set, batch_size=8, shuffle=True, num_workers=10)
+
+    model.classifier = torch.nn.Linear(
+        in_features=model.classifier.in_features, out_features=21
+    )
+    for param in model.parameters():
+        param.requires_grad = False
+
+    for param in model.classifier.parameters():
+        param.requires_grad = True
+
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, model.parameters()), lr=0.001
+    )
+    num_epochs = 10
+    losses = []
+    for epoch in tqdm(range(num_epochs)):
+        running_loss = 0
+        for train_features, train_labels in dataloader:
+            optimizer.zero_grad()
+            outputs = model(train_features).logits
+            train_labels = train_labels.type(torch.float32)
+            loss = criterion(outputs, train_labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+        al = running_loss / len(image_data_set)
+        losses.append(al)
+    plt.plot(losses)
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.show()
 
 
 if __name__ == "__main__":
-    clf = RandomForestClassifier()
-    dataset = text_dataset_train
-    dataset.preprocess_text()
-    cross_validation_training(clf, dataset)
+    img_pipeline()
