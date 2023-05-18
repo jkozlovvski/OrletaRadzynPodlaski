@@ -8,8 +8,8 @@ import random
 import torch
 
 from sklearn.feature_extraction.text import CountVectorizer
-from utils import CTFIDFVectorizer
-from utils import id2label, label2id
+from .utils import CTFIDFVectorizer
+from .utils import id2label, label2id
 import torch.nn.functional as F
 
 import re
