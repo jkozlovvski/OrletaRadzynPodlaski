@@ -48,7 +48,7 @@ class ImageDataSet(Dataset):
         )
         image = Image.open(img_path)
         #       image.show()
-        return np.array(image)
+        return np.array(image), self.labels[image_name]
 
 
 text_dataset_train = TextDataSet(
