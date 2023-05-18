@@ -59,7 +59,8 @@ def img_pipeline():
     )
     num_epochs = 10
     losses = []
-    for epoch in tqdm(range(num_epochs)):
+    for epoch in range(num_epochs):
+        print("epoch: ", epoch)
         running_loss = 0
         for train_features, train_labels in dataloader:
             optimizer.zero_grad()
@@ -71,10 +72,8 @@ def img_pipeline():
             running_loss += loss.item()
         al = running_loss / len(image_data_set)
         losses.append(al)
-    plt.plot(losses)
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.show()
+        print("running_loss: ", running_loss)
+    torch.save(model.state_dict(), "..")
 
 
 if __name__ == "__main__":
