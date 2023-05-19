@@ -68,16 +68,16 @@ def img_pipeline():
 
     num_epochs = 5
     for epoch in range(num_epochs):
-        running_loss = 0
-        for train_features, train_labels in tqdm(dataloader_train):
-            optimizer.zero_grad()
-            train_features.to(device)
-            outputs = model(train_features).logits
-            train_labels = train_labels.type(torch.float32)
-            loss = criterion(outputs, train_labels)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
+        # running_loss = 0
+        # for train_features, train_labels in tqdm(dataloader_train):
+        #     optimizer.zero_grad()
+        #     train_features.to(device)
+        #     outputs = model(train_features).logits
+        #     train_labels = train_labels.type(torch.float32)
+        #     loss = criterion(outputs, train_labels)
+        #     loss.backward()
+        #     optimizer.step()
+        #     running_loss += loss.item()
 
         acc = 0
         length = 0
@@ -85,11 +85,13 @@ def img_pipeline():
             with torch.no_grad():
                 test_features.to(device)
                 outputs = model(test_features).logits
-                acc += outputs == test_labels
-                length += len(outputs)
+                if outputs.shape == test_labels.shape:
+                    acc += (outputs == test_labels).float().sum()
+                    print(acc)
+                    length += len(outputs)
         print(f"acc for batch: ", acc / length)
 
-        al = running_loss / len(dataloader_train)
+        # al = running_loss / len(dataloader_train)
         print(f"Running loss: {al}")
         torch.save(model, f"../model_vanilla{epoch}")
 
