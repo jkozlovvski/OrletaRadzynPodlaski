@@ -5,8 +5,8 @@ from dataclass import ImageDataSet, EnsembleDataset
 from transformers import ViTImageProcessor, AutoModelForImageClassification
 import torch
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
+from ensemble import Ensemble
 
 
 def cross_validation_training(model, dataset, folds=10):
@@ -43,6 +43,10 @@ def img_pipeline():
     )
     image_data_set = ImageDataSet("../datasets/train_set", extractor)
     dataloader = DataLoader(image_data_set, batch_size=32, shuffle=True)
+    dataset_eval, dataset_train = torch.utils.data.random_split(dataloader, [0.2, 0.8])
+
+    dataloader_train = DataLoader(dataset_train, batch_size=32, shuffle=True)
+    dataloader_eval = DataLoader(dataset_eval, batch_size=32, shuffle=True)
 
     model.classifier = torch.nn.Linear(
         in_features=model.classifier.in_features, out_features=21
@@ -63,22 +67,29 @@ def img_pipeline():
     num_epochs = 10
     losses = []
     for epoch in range(num_epochs):
-        print("epoch: ", epoch)
         running_loss = 0
-        for train_features, train_labels in tqdm(dataloader):
+        for train_features, train_labels in tqdm(dataloader_train):
             optimizer.zero_grad()
-            train_features = train_features.to(device)
-            train_labels = train_labels.to(device)
             outputs = model(train_features).logits
             train_labels = train_labels.type(torch.float32)
             loss = criterion(outputs, train_labels)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-        al = running_loss / len(image_data_set)
-        losses.append(al)
-        print("running_loss: ", running_loss)
-    torch.save(model.state_dict(), "model")
+
+        acc = 0
+        length = 0
+        for (img_features, text_features), test_labels in tqdm(dataloader_eval):
+            with torch.no_grad():
+                outputs = model(img_features)["pooler_output"].squeeze()
+                outputs = ensemble(outputs, text_features.squeeze())
+                acc += outputs == test_labels
+                length += len(outputs)
+        print(f"acc for batch: ", acc / length)
+
+        al = running_loss / len(dataloader_train)
+        print(f"Running loss: {al}")
+        torch.save(ensemble, f"../ensemble{epoch}")
 
 
 def ensemble_pipeline():
@@ -94,9 +105,55 @@ def ensemble_pipeline():
         extractor,
     )
 
-    print(f"Length of ensemble dataset: {len(ensemble_dataset.images)}")
-    return
+    model = AutoModelForImageClassification.from_pretrained(
+        "DunnBC22/dit-base-Business_Documents_Classified_v2"
+    )
+
+    dataset_eval, dataset_train = torch.utils.data.random_split(dataloader, [0.2, 0.8])
+
+    dataloader_train = DataLoader(dataset_train, batch_size=32, shuffle=True)
+    dataloader_eval = DataLoader(dataset_eval, batch_size=32, shuffle=True)
+    model = torch.nn.Sequential(*list(model.children())[:-1])
+    ensemble = Ensemble(768, 128)
+    for param in model.parameters():
+        param.requires_grad = False
+
+    for param in ensemble.parameters():
+        param.requires_grad = True
+
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, ensemble.parameters()), lr=0.001
+    )
+    num_epochs = 10
+
+    for epoch in range(num_epochs):
+        running_loss = 0
+        for (img_features, text_features), train_labels in tqdm(dataloader_train):
+            optimizer.zero_grad()
+            outputs = model(img_features)["pooler_output"].squeeze()
+            outputs = ensemble(outputs, text_features.squeeze())
+            train_labels = train_labels.type(torch.float32)
+            loss = criterion(outputs, train_labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+
+        acc = 0
+        length = 0
+        for (img_features, text_features), test_labels in dataloader_eval:
+            with torch.no_grad():
+                outputs = model(img_features)["pooler_output"].squeeze()
+                outputs = ensemble(outputs, text_features.squeeze())
+                acc += outputs == test_labels
+                length += len(outputs)
+        print(f"acc for batch: ", acc / length)
+
+        al = running_loss / len(dataloader_train)
+        print(f"Running loss: {al}")
+        torch.save(ensemble, f"../ensemble{epoch}")
 
 
 if __name__ == "__main__":
+    im
     ensemble_pipeline()

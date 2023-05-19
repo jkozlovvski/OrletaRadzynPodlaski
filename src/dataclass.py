@@ -82,7 +82,7 @@ class TextDataSet(Dataset):
         image = self.images[idx]
         label = self.labels[image]
         text = self.texts[image]
-        return text, label
+        return torch.tensor(text.todense(), dtype=torch.float32), label
 
 
 class ImageDataSet(Dataset):
@@ -130,8 +130,8 @@ class EnsembleDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        img, _ = self.imgdataset[idx]
-        text, label = self.textdataset[idx]
+        img, label = self.imgdataset[idx]
+        text, _ = self.textdataset[idx]
 
         return (img, text), label
 

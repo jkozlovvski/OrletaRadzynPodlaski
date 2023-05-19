@@ -10,9 +10,9 @@ class Ensemble(torch.nn.Module):
             torch.nn.Linear(256, 64),
             torch.nn.ReLU(),
             torch.nn.Linear(64, 21),
-            torch.nn.Softmax(),
+            torch.nn.Softmax(dim=1),  # (batch, logits)
         )
 
     def forward(self, img, text):
-        input = torch.cat(img, text)
+        input = torch.cat([img, text], axis=1)
         return self.mlp(input)
