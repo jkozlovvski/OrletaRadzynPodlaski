@@ -42,11 +42,14 @@ def img_pipeline():
         "DunnBC22/dit-base-Business_Documents_Classified_v2"
     )
     image_data_set = ImageDataSet("../datasets/train_set", extractor)
-    dataloader = DataLoader(image_data_set, batch_size=32, shuffle=True, num_workers=4)
+    dataloader = DataLoader(image_data_set, batch_size=32, shuffle=True)
 
     model.classifier = torch.nn.Linear(
         in_features=model.classifier.in_features, out_features=21
     )
+    if torch.cuda.is_available():
+        print('kalabanga')
+        model.cuda()
 
     for param in model.parameters():
         param.requires_grad = False
@@ -63,8 +66,10 @@ def img_pipeline():
     for epoch in range(num_epochs):
         print("epoch: ", epoch)
         running_loss = 0
-        for train_features, train_labels in dataloader:
+        for train_features, train_labels in tqdm(dataloader):
             optimizer.zero_grad()
+            train_features = train_features.to(device)
+            train_labels = train_labels.to(device)
             outputs = model(train_features).logits
             train_labels = train_labels.type(torch.float32)
             loss = criterion(outputs, train_labels)
@@ -74,7 +79,7 @@ def img_pipeline():
         al = running_loss / len(image_data_set)
         losses.append(al)
         print("running_loss: ", running_loss)
-    torch.save(model.state_dict(), "..")
+    torch.save(model.state_dict(), "model")
 
 
 if __name__ == "__main__":

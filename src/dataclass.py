@@ -14,7 +14,7 @@ import torch.nn.functional as F
 import re
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class TextDataSet(Dataset):
