@@ -42,8 +42,9 @@ def img_pipeline():
         "DunnBC22/dit-base-Business_Documents_Classified_v2"
     )
     image_data_set = ImageDataSet("../datasets/train_set", extractor)
-    dataloader = DataLoader(image_data_set, batch_size=32, shuffle=True)
-    dataset_eval, dataset_train = torch.utils.data.random_split(dataloader, [0.2, 0.8])
+    dataset_eval, dataset_train = torch.utils.data.random_split(
+        image_data_set, [0.2, 0.8]
+    )
 
     dataloader_train = DataLoader(dataset_train, batch_size=32, shuffle=True)
     dataloader_eval = DataLoader(dataset_eval, batch_size=32, shuffle=True)
@@ -64,12 +65,13 @@ def img_pipeline():
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()), lr=0.001
     )
-    num_epochs = 10
-    losses = []
+
+    num_epochs = 5
     for epoch in range(num_epochs):
         running_loss = 0
         for train_features, train_labels in tqdm(dataloader_train):
             optimizer.zero_grad()
+            train_features.to(device)
             outputs = model(train_features).logits
             train_labels = train_labels.type(torch.float32)
             loss = criterion(outputs, train_labels)
@@ -79,17 +81,17 @@ def img_pipeline():
 
         acc = 0
         length = 0
-        for (img_features, text_features), test_labels in tqdm(dataloader_eval):
+        for test_features, test_labels in tqdm(dataloader_eval):
             with torch.no_grad():
-                outputs = model(img_features)["pooler_output"].squeeze()
-                outputs = ensemble(outputs, text_features.squeeze())
+                test_features.to(device)
+                outputs = model(test_features).logits
                 acc += outputs == test_labels
                 length += len(outputs)
         print(f"acc for batch: ", acc / length)
 
         al = running_loss / len(dataloader_train)
         print(f"Running loss: {al}")
-        torch.save(ensemble, f"../ensemble{epoch}")
+        torch.save(model, f"../model_vanilla{epoch}")
 
 
 def ensemble_pipeline():
@@ -115,6 +117,11 @@ def ensemble_pipeline():
     dataloader_eval = DataLoader(dataset_eval, batch_size=32, shuffle=True)
     model = torch.nn.Sequential(*list(model.children())[:-1])
     ensemble = Ensemble(768, 128)
+
+    if torch.cuda.is_available():
+        model.cuda()
+        ensemble.cuda()
+
     for param in model.parameters():
         param.requires_grad = False
 
@@ -125,12 +132,14 @@ def ensemble_pipeline():
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, ensemble.parameters()), lr=0.001
     )
-    num_epochs = 10
+    num_epochs = 5
 
     for epoch in range(num_epochs):
         running_loss = 0
         for (img_features, text_features), train_labels in tqdm(dataloader_train):
             optimizer.zero_grad()
+            img_features = img_features.to(device)
+            text_features = text_features.to(device)
             outputs = model(img_features)["pooler_output"].squeeze()
             outputs = ensemble(outputs, text_features.squeeze())
             train_labels = train_labels.type(torch.float32)
@@ -143,6 +152,8 @@ def ensemble_pipeline():
         length = 0
         for (img_features, text_features), test_labels in dataloader_eval:
             with torch.no_grad():
+                img_features = img_features.to(device)
+                text_features = text_features.to(device)
                 outputs = model(img_features)["pooler_output"].squeeze()
                 outputs = ensemble(outputs, text_features.squeeze())
                 acc += outputs == test_labels
@@ -155,5 +166,5 @@ def ensemble_pipeline():
 
 
 if __name__ == "__main__":
-    im
+    img_pipeline()
     ensemble_pipeline()
