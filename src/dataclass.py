@@ -86,15 +86,20 @@ class TextDataSet(Dataset):
 
 
 class ImageDataSet(Dataset):
-    def __init__(self, img_dir, extractor=None):
+    def __init__(self, img_dir, extractor=None, test=False):
         self.img_dir = img_dir
         self.labels = {}
-        for dir_name in glob.glob(img_dir + "/*"):
-            label = os.path.basename(dir_name)
-            for file_name in glob.glob(dir_name + "/*"):
-                file_name = os.path.basename(file_name)
-                self.labels[file_name] = id2label[label]
-        self.images = list(self.labels.keys())
+        self.images = []
+        self.test = test
+        if test:
+            for img_name in glob.glob(img_dir + "/*"):
+                self.images.append(os.path.basename(img_name))
+        else:
+            for dir_name in glob.glob(img_dir + "/*"):
+                label = os.path.basename(dir_name)
+                for file_name in glob.glob(dir_name + "/*"):
+                    file_name = os.path.basename(file_name)
+                    self.labels[file_name] = id2label[label]
         self.extractor = extractor
 
     def __len__(self):
@@ -102,16 +107,21 @@ class ImageDataSet(Dataset):
 
     def __getitem__(self, idx):
         image_name = self.images[idx]
-        img_path = os.path.join(
-            self.img_dir, label2id[self.labels[image_name]], image_name
-        )
+        if self.test:
+            img_path = os.path.join(self.img_dir, image_name)
+        else:
+            img_path = os.path.join(
+                self.img_dir, label2id[self.labels[image_name]], image_name
+            )
         image = Image.open(img_path)
         image = image.convert("RGB")
         image = self.extractor(images=image, return_tensors="pt")["pixel_values"]
         image = torch.squeeze(image)
-        label = F.one_hot(torch.tensor(self.labels[image_name]), 21)
+        label = image_name
+        if not self.test:
+            label = F.one_hot(torch.tensor(self.labels[image_name]), 21)
 
-        return image.to(device), label.to(device)
+        return image.to(device), image_name
 
 
 class EnsembleDataset(Dataset):
