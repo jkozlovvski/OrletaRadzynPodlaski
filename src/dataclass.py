@@ -31,6 +31,10 @@ class TextDataSet(Dataset):
         self.labels = pd.read_pickle(labels_path)
         self.labels = {k: id2label[v] for k, v in self.labels.items()}
 
+        # making it unified with labels from images
+        self.texts = {os.path.basename(k): v for k, v in self.texts.items()}
+        self.labels = {os.path.basename(k): v for k, v in self.labels.items()}
+
         # some keys are missing
         keys_to_del = []
         for k, v in self.texts.items():
@@ -41,6 +45,7 @@ class TextDataSet(Dataset):
             del self.texts[k]
 
         self.preprocess_text()
+        self.images = list(self.labels.keys())
 
     def preprocess_text(self):
         # preprocessing text
@@ -107,6 +112,28 @@ class ImageDataSet(Dataset):
         label = F.one_hot(torch.tensor(self.labels[image_name]), 21)
 
         return image.to(device), label.to(device)
+
+
+class EnsembleDataset(Dataset):
+    def __init__(self, img_dir, text_data_path, text_labels_path, extractor=None):
+        self.textdataset = TextDataSet(text_data_path, text_labels_path)
+        self.imgdataset = ImageDataSet(img_dir, extractor)
+
+        self.images = list(
+            set(self.textdataset.images).intersection(self.imgdataset.images)
+        )
+        # unifying images
+        self.textdataset.images = self.images
+        self.imgdataset.images = self.images
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        img, _ = self.imgdataset[idx]
+        text, label = self.textdataset[idx]
+
+        return (img, text), label
 
 
 text_dataset_train = TextDataSet(

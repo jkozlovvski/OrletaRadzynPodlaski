@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score
-from dataclass import ImageDataSet
+from dataclass import ImageDataSet, EnsembleDataset
 from transformers import ViTImageProcessor, AutoModelForImageClassification
 import torch
 from tqdm import tqdm
@@ -48,7 +48,6 @@ def img_pipeline():
         in_features=model.classifier.in_features, out_features=21
     )
     if torch.cuda.is_available():
-        print('kalabanga')
         model.cuda()
 
     for param in model.parameters():
@@ -82,5 +81,22 @@ def img_pipeline():
     torch.save(model.state_dict(), "model")
 
 
+def ensemble_pipeline():
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    extractor = ViTImageProcessor.from_pretrained(
+        "DunnBC22/dit-base-Business_Documents_Classified_v2"
+    )
+
+    ensemble_dataset = EnsembleDataset(
+        "../datasets/train_set",
+        "../hackathon/train_set_ocr.pkl",
+        "../hackathon/train_labels_final.pkl",
+        extractor,
+    )
+
+    print(f"Length of ensemble dataset: {len(ensemble_dataset.images)}")
+    return
+
+
 if __name__ == "__main__":
-    img_pipeline()
+    ensemble_pipeline()
